@@ -41,6 +41,7 @@ import com.example.dailymate.data.DailyMateViewModelFactory
 import com.example.dailymate.data.Routine
 import com.example.dailymate.data.RoutineRepository
 import com.example.dailymate.data.UserRepository
+import com.example.dailymate.RoutineType
 import com.example.dailymate.ui.theme.DailyMateTheme
 import com.example.dailymate.ui.theme.GrayText
 import com.example.dailymate.ui.theme.PrimaryGreen
@@ -114,7 +115,7 @@ fun CalendarScreen(
 
     val routinesForSelectedDay = remember(allRoutines, selectedDate) {
         allRoutines.filter { routine ->
-            routine.userId == userId && routine.days.contains(dayOfWeek)
+            routine.userId == userId && isRoutineActiveOnDate(routine, selectedDate)
         }
     }
 
@@ -194,5 +195,21 @@ fun CalendarScreen(
                 }
             }
         }
+    }
+}
+
+private fun isRoutineActiveOnDate(routine: Routine, selectedDate: LocalDate): Boolean {
+    val startDate = LocalDate.ofEpochDay(routine.startDate)
+    val endDate = LocalDate.ofEpochDay(routine.endDate)
+
+    if (selectedDate.isBefore(startDate) || selectedDate.isAfter(endDate)) {
+        return false
+    }
+
+    return when (routine.routineType) {
+        RoutineType.DAILY.name -> true
+        RoutineType.WEEKLY.name -> selectedDate.dayOfWeek == startDate.dayOfWeek
+        RoutineType.MONTHLY.name -> selectedDate.dayOfMonth == startDate.dayOfMonth
+        else -> true
     }
 }

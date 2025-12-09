@@ -36,6 +36,7 @@ import com.example.dailymate.ui.theme.PrimaryGreen
 import com.example.dailymate.ui.theme.GrayText
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.time.ZoneId
 import java.time.format.TextStyle as DateTextStyle
 import java.util.*
 
@@ -118,7 +119,12 @@ fun ManagementScreen(modifier: Modifier = Modifier, currentUserId: Int) {
     val datePickerDialog = DatePickerDialog(
         context,
         { _, year, month, dayOfMonth ->
-            startDate = LocalDate.of(year, month + 1, dayOfMonth)
+            val selectedStart = LocalDate.of(year, month + 1, dayOfMonth)
+            startDate = selectedStart
+
+            if (endDate.isBefore(selectedStart)) {
+                endDate = selectedStart
+            }
         },
         startDate.year,
         startDate.monthValue - 1,
@@ -128,7 +134,12 @@ fun ManagementScreen(modifier: Modifier = Modifier, currentUserId: Int) {
     val endDatePickerDialog = DatePickerDialog(
         context,
         { _, year, month, dayOfMonth ->
-            endDate = LocalDate.of(year, month + 1, dayOfMonth)
+            val selectedEnd = LocalDate.of(year, month + 1, dayOfMonth)
+            if (selectedEnd.isBefore(startDate)) {
+                Toast.makeText(context, "종료 날짜는 시작 날짜보다 빠를 수 없습니다.", Toast.LENGTH_SHORT).show()
+            } else {
+                endDate = selectedEnd
+            }
         },
         endDate.year,
         endDate.monthValue - 1,
@@ -229,14 +240,26 @@ fun ManagementScreen(modifier: Modifier = Modifier, currentUserId: Int) {
                             onValueChange = { },
                             placeholder = "시작 날짜",
                             isDate = true,
-                            onDateClick = { datePickerDialog.show() }
+                            onDateClick = {
+                                datePickerDialog.datePicker.maxDate = endDate
+                                    .atStartOfDay(ZoneId.systemDefault())
+                                    .toInstant()
+                                    .toEpochMilli()
+                                datePickerDialog.show()
+                            }
                         )
                         RoutineEditableFieldInBox(
                             value = endDate.format(DateFormat),
                             onValueChange = { },
                             placeholder = "종료 날짜",
                             isDate = true,
-                            onDateClick = { endDatePickerDialog.show() }
+                            onDateClick = {
+                                endDatePickerDialog.datePicker.minDate = startDate
+                                    .atStartOfDay(ZoneId.systemDefault())
+                                    .toInstant()
+                                    .toEpochMilli()
+                                endDatePickerDialog.show()
+                            }
                         )
                     }
                 }
@@ -248,25 +271,21 @@ fun ManagementScreen(modifier: Modifier = Modifier, currentUserId: Int) {
             val trimmedTitle = routineTitle.trim()
             val trimmedGoal = goalAmount.trim()
 
-            // ⭐ [핵심 수정 1] currentUserId 유효성 검사를 먼저 명확하게 처리
             if (currentUserId == -1) {
                 Toast.makeText(context, "오류: 사용자 정보를 찾을 수 없습니다. 다시 로그인해 주세요.", Toast.LENGTH_SHORT).show()
                 return@AddButton
             }
 
-            // ⭐ [핵심 수정 2] 제목/목표량 유효성 검사
             if (trimmedTitle.isEmpty() || trimmedGoal.isEmpty()) {
                 Toast.makeText(context, "제목과 목표량을 모두 입력해주세요.", Toast.LENGTH_SHORT).show()
                 return@AddButton
             }
 
-            // ⭐ [핵심 수정 3] 날짜 유효성 검사
             if (startDate.isAfter(endDate)) {
                 Toast.makeText(context, "시작 날짜는 종료 날짜보다 늦을 수 없습니다.", Toast.LENGTH_SHORT).show()
                 return@AddButton
             }
 
-            // 모든 검사 통과 시 루틴 추가
             val startDayLong = startDate.toEpochDay()
             val endDayLong = endDate.toEpochDay()
 
