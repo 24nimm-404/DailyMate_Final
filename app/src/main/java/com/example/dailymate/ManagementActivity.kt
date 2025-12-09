@@ -355,7 +355,8 @@ fun RoutineEditableFieldInBox(
             ),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
-            readOnly = isDate
+            readOnly = isDate,
+            enabled = !isDate
         )
     }
 }
